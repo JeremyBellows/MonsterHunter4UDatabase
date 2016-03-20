@@ -2,7 +2,13 @@
 
 #r "FSharp.Data.dll"
 
+open Microsoft.FSharp.Reflection
 open FSharp.Data
+
+//for the discriminated union types
+let discriminatedUniontoString (x:'a) =
+    match FSharpValue.GetUnionFields(x, typeof<'a>) with
+    | case, _ -> case.Name
 
 //_id,parent_id,weapon_name,wtype,creation_cost,upgrade_cost,attack,max_attack,element,element_attack,element_2,element_2_attack,awaken_element,awaken_element_attack,defense,red,orange,yellow,green,blue,white,purple,red_plus,orange_plus,yellow_plus,green_plus,blue_plus,white_plus,purple_plus,sharpness,affinity,horn_notes,shelling_type,phial,charges,coatings,recoil,reload_speed,rapid_fire,deviation,ammo,special_ammo,sharpness_file,num_slots,tree_depth,final,create
 
@@ -21,6 +27,8 @@ let convertStringToKinsectType (stringKinsectType : string) =
     | "stamina" -> Stamina
     | "speed" -> Speed
     | _ -> raise <| new System.Exception(sprintf "Missing Kinsect Type %s" stringKinsectType)
+
+let convertKinsectjk
 
 type RequiredStats =
   {
@@ -110,3 +118,36 @@ let cuttingPathJapaneseEventData =
        Skill = row.Skill
        RequiredStats = convertIntsToRequiredStats row.Power row.Stamina row.Speed
      })
+
+let stringBuilder = new System.Text.StringBuilder()
+
+let buildHeader () =
+  "Name,Type,Skill,Path,Required Power, Required Stamina, Required Speed\n" |> stringBuilder.Append
+
+let buildKinsectData path items =
+  items
+  |> Array.iter(fun item ->
+                sprintf "%s,%s,%s,%s,%i,%i,%i\n" item.Name (item.Type |> discriminatedUniontoString) item.Skill path item.RequiredStats.Power item.RequiredStats.Stamina item.RequiredStats.Speed
+                |> stringBuilder.AppendLine |> ignore
+               )
+
+buildHeader ()
+
+bluntPathData
+|> buildKinsectData "Blunt"
+
+bluntPathEventQuestData
+|> buildKinsectData "Blunt Event"
+
+bluntPathJapaneseEventData
+|> buildKinsectData "Blunt Japanese Event"
+
+cuttingPathData
+|> buildKinsectData "Cutting"
+
+cuttingPathJapaneseEventData
+|> buildKinsectData "Cutting Japanese Event"
+
+let writePath = sprintf "%s/kinsectData.csv" __SOURCE_DIRECTORY__
+
+System.IO.File.WriteAllText(writePath, stringBuilder.ToString())
